@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>{{ game_name }} — Steam Tracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" href="https://upload.wikimedia.org/wikipedia/commons/8/83/Steam_icon_logo.svg" type="image/svg+xml">
+</head>
+<body>
+    <canvas id="bg-canvas"></canvas>
+    <div id="page-loader" class="page-loader">
+        <div class="loader-ring"></div>
+        <span class="loader-text">Loading...</span>
+    </div>
+
+    <header class="site-header">
+        <div class="site-header-left">
+            {% if profile.avatarmedium %}
+            <img src="{{ profile.avatarmedium }}" alt="avatar" class="player-avatar">
+            {% else %}
+            <img src="https://upload.wikimedia.org/wikipedia/commons/8/83/Steam_icon_logo.svg"
+                alt="Steam" class="steam-logo">
+            {% endif %}
+            <div class="site-title-wrap">
+                <span class="site-title">{{ profile.personaname or "Steam Tracker" }}</span>
+                <span class="site-subtitle">Achievement Dashboard</span>
+            </div>
+        </div>
+        <div class="header-stats">
+            <div class="header-stat">
+                <span class="header-stat-value">{{ unlocked }}/{{ total }}</span>
+                <span class="header-stat-label">Achievements</span>
+            </div>
+            <div class="header-divider"></div>
+            <div class="header-stat">
+                <span class="header-stat-value" style="color: {{ color }}">{{ percentage }}%</span>
+                <span class="header-stat-label">Complete</span>
+            </div>
+            <div class="header-divider"></div>
+            <div class="header-stat">
+                <span class="header-stat-value">
+                    <span class="badge" style="--color: {{ color }}">{{ badge }}</span>
+                </span>
+                <span class="header-stat-label">Rank</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="game-hero">
+        <img class="game-hero-img"
+            src="https://cdn.cloudflare.steamstatic.com/steam/apps/{{ app_id }}/header.jpg"
+            alt=""
+            onerror="if(this.src.includes('header.jpg')){this.src=this.src.replace('header.jpg','capsule_616x353.jpg')}else{this.onerror=null;this.style.display='none'}">
+        <div class="game-hero-overlay">
+            <a href="/dashboard" class="back-btn">← Dashboard</a>
+            <h1 class="game-title">{{ game_name }}</h1>
+            <div class="game-hero-bar-wrap">
+                <div class="game-hero-bar">
+                    <div class="game-hero-fill" style="width: {{ percentage }}%; background: {{ color }};"></div>
+                </div>
+                <span class="game-hero-pct" style="color: {{ color }}">{{ percentage }}%</span>
+            </div>
+        </div>
+    </div>
+
+    <main class="main">
+
+        <div class="ach-section-label">
+            <span>{{ unlocked }} Unlocked</span>
+            <div style="display:flex;gap:8px;align-items:center">
+                {% if unlocked < total %}
+                <button class="ai-btn" onclick="loadAiStrategy({{ app_id }})">✦ AI Strategy</button>
+                {% endif %}
+                <button class="refresh-btn" onclick="refreshData({{ app_id }})" id="refresh-btn" title="Refresh achievement data">↻</button>
+            </div>
+        </div>
+
+        <div class="ai-chat" id="ai-chat" style="display:none">
+            <div class="ai-chat-header">
+                <span class="ai-chat-title">✦ AI Strategy — {{ game_name }}</span>
+                <button class="ai-chat-close" onclick="closeChat()">✕</button>
+            </div>
+            <div class="ai-chat-messages" id="ai-chat-messages"></div>
+            <form class="ai-chat-form" onsubmit="sendMessage(event)">
+                <input type="text" class="ai-chat-input" id="ai-chat-input"
+                    placeholder="Ask a follow-up…" autocomplete="off">
+                <button type="submit" class="ai-chat-send" id="ai-chat-send-btn">↑</button>
+            </form>
+        </div>
+
+        <div class="ach-grid">
+            {% for ach in achievements %}
+            <div class="ach-card {% if ach.achieved %}ach-unlocked{% else %}ach-locked{% endif %}">
+                <div class="ach-icon-wrap">
+                    {% if ach.achieved and ach.icon %}
+                        <img src="{{ ach.icon }}" alt="" class="ach-icon">
+                    {% elif ach.icon_gray %}
+                        <img src="{{ ach.icon_gray }}" alt="" class="ach-icon">
+                    {% else %}
+                        <div class="ach-icon-placeholder"></div>
+                    {% endif %}
+                    {% if ach.achieved %}
+                    <div class="ach-check">✓</div>
+                    {% endif %}
+                </div>
+                <div class="ach-body">
+                    <div class="ach-name">{{ ach.display_name }}</div>
+                    {% if ach.description %}
+                    <div class="ach-desc">{{ ach.description }}</div>
+                    {% endif %}
+                    <div class="ach-meta">
+                        <span class="badge" style="--color: {{ ach.rarity_color }}">{{ ach.rarity }}</span>
+                        {% if ach.achieved and ach.unlock_date %}
+                        <span class="ach-date">Unlocked {{ ach.unlock_date }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="ach-rarity">
+                    <span class="ach-pct" style="color: {{ ach.rarity_color }}">{{ ach.global_pct }}%</span>
+                    <span class="ach-pct-label">of players</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+    </main>
+
+    <script>
+        const loader = document.getElementById('page-loader');
+        document.addEventListener('click', e => {
+            const link = e.target.closest('a[href]');
+            if (link && link.href.startsWith(location.origin)) {
+                loader.classList.add('active');
+            }
+        });
+        window.addEventListener('pageshow', () => loader.classList.remove('active'));
+    </script>
+    <script src="/static/bg.js"></script>
+    <script>
+        // ── Refresh ──
+        async function refreshData(appId) {
+            const btn = document.getElementById('refresh-btn');
+            btn.disabled = true;
+            btn.style.opacity = '0.4';
+            await fetch(`/cache/clear/${appId}`, { method: 'POST' });
+            location.reload();
+        }
+
+        // ── AI Chat ──
+        const lockedAchs = {{ achievements | tojson }}.filter(a => !a.achieved);
+        let chatHistory = [];
+        let chatBusy = false;
+
+        function escHtml(s) {
+            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+
+        function renderLockedCard() {
+            const msgs = document.getElementById('ai-chat-messages');
+            const div = document.createElement('div');
+            div.className = 'ai-msg ai-msg-data';
+            div.innerHTML = `
+                <div class="data-bubble-title">${lockedAchs.length} remaining achievements</div>
+                <ul>${lockedAchs.map(a =>
+                    `<li><strong>${escHtml(a.display_name)}</strong>${a.description ? ` — ${escHtml(a.description)}` : ''}
+                    <span style="color:${escHtml(a.rarity_color)};font-size:0.78rem;margin-left:4px">${a.global_pct}% of players</span></li>`
+                ).join('')}</ul>`;
+            msgs.appendChild(div);
+            scrollChat();
+        }
+
+        async function loadAiStrategy(appId) {
+            const chat = document.getElementById('ai-chat');
+            chat.style.display = 'flex';
+            chat.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            if (chatHistory.length === 0) {
+                renderLockedCard();
+                await callApi(appId, []);
+            }
+        }
+
+        function closeChat() {
+            document.getElementById('ai-chat').style.display = 'none';
+        }
+
+        function isListRequest(text) {
+            const t = text.toLowerCase();
+            return /\b(what|which|list|show|tell me|display)\b.{0,30}\b(achievement|left|remain|locked|missing)\b/i.test(t)
+                || /\b(achievement|left|remain|locked|missing)\b.{0,30}\b(what|which|list|show|left)\b/i.test(t);
+        }
+
+        async function sendMessage(e) {
+            e.preventDefault();
+            if (chatBusy) return;
+            const input = document.getElementById('ai-chat-input');
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = '';
+            appendBubble('user', text);
+
+            if (isListRequest(text)) {
+                renderLockedCard();
+                return;
+            }
+
+            chatHistory.push({ role: 'user', content: text });
+            await callApi({{ app_id }}, chatHistory);
+        }
+
+        async function callApi(appId, messages) {
+            chatBusy = true;
+            document.getElementById('ai-chat-send-btn').disabled = true;
+            const bubble = appendBubble('assistant', null);
+            try {
+                const resp = await fetch(`/ai/strategy/${appId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages })
+                });
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+                    bubble.innerHTML = `<span class="ai-error">${err.detail || 'Error.'}</span>`;
+                    return;
+                }
+                const reader = resp.body.getReader();
+                const decoder = new TextDecoder();
+                let raw = '';
+                bubble.innerHTML = '';
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    raw += decoder.decode(value, { stream: true });
+                    bubble.innerHTML = markdownToHtml(raw);
+                    scrollChat();
+                }
+                chatHistory.push({ role: 'assistant', content: raw });
+            } catch (err) {
+                bubble.innerHTML = `<span class="ai-error">Failed to get response.</span>`;
+            } finally {
+                chatBusy = false;
+                document.getElementById('ai-chat-send-btn').disabled = false;
+            }
+        }
+
+        function appendBubble(role, text) {
+            const msgs = document.getElementById('ai-chat-messages');
+            const div = document.createElement('div');
+            div.className = `ai-msg ai-msg-${role}`;
+            if (role === 'user') {
+                div.textContent = text;
+            } else if (text) {
+                div.innerHTML = markdownToHtml(text);
+            } else {
+                div.innerHTML = '<span class="ai-typing-dots"><span></span><span></span><span></span></span>';
+            }
+            msgs.appendChild(div);
+            scrollChat();
+            return div;
+        }
+
+        function scrollChat() {
+            const el = document.getElementById('ai-chat-messages');
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function sanitize(s) {
+            return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+
+        function markdownToHtml(md) {
+            return sanitize(md)
+                .replace(/^#### (.+)$/gm, '<h4>$1</h4>')
+                .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+                .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+                .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                .replace(/^- (.+)$/gm, '<li>$1</li>')
+                .replace(/(<li>[\s\S]*?<\/li>\n?)+/g, m => `<ul>${m}</ul>`)
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/^(?!<[hul\/])(.+)$/gm, '<p>$1</p>')
+                .replace(/<p><\/p>/g, '');
+        }
+    </script>
+</body>
+</html>

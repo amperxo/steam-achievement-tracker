@@ -1,0 +1,10 @@
+{
+    "steam_api_key": "YOUR_STEAM_API_KEY",
+    "steam_id": "YOUR_STEAM_ID",
+    "dashboard_game_limit": 20,
+    "server_host": "0.0.0.0",
+    "server_port": 8000,
+    "badge_perfect": 100,
+    "badge_master_min": 75,
+    "badge_expert_min": 50
+}

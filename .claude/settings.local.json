@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:steamwebapi.azurewebsites.net)",
+      "WebFetch(domain:partner.steamgames.com)"
+    ]
+  }
+}

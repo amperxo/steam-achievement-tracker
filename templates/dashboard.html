@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Steam Tracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" href="https://upload.wikimedia.org/wikipedia/commons/8/83/Steam_icon_logo.svg" type="image/svg+xml">
+</head>
+<body>
+    <canvas id="bg-canvas"></canvas>
+    <div id="page-loader" class="page-loader">
+        <div class="loader-ring"></div>
+        <span class="loader-text">Loading...</span>
+    </div>
+
+    <header class="site-header">
+        <div class="site-header-left">
+            {% if profile.avatarmedium %}
+            <img src="{{ profile.avatarmedium }}" alt="avatar" class="player-avatar">
+            {% else %}
+            <img src="https://upload.wikimedia.org/wikipedia/commons/8/83/Steam_icon_logo.svg"
+                alt="Steam" class="steam-logo">
+            {% endif %}
+            <div class="site-title-wrap">
+                <span class="site-title">{{ profile.personaname or "Steam Tracker" }}</span>
+                <span class="site-subtitle">Achievement Dashboard</span>
+            </div>
+        </div>
+
+        <div class="site-header-right">
+            <div class="header-stats">
+                <div class="header-stat">
+                    <span class="header-stat-value">{{ total_games }}</span>
+                    <span class="header-stat-label">Games</span>
+                </div>
+                <div class="header-divider"></div>
+                <div class="header-stat">
+                    <span class="header-stat-value">{{ total_unlocked }}</span>
+                    <span class="header-stat-label">Achievements</span>
+                </div>
+                <div class="header-divider"></div>
+                <div class="header-stat">
+                    <span class="header-stat-value">{{ avg_completion }}%</span>
+                    <span class="header-stat-label">Avg</span>
+                </div>
+                <div class="header-divider"></div>
+                <div class="header-stat">
+                    <span class="header-stat-value">{{ perfect_games }}</span>
+                    <span class="header-stat-label">Perfect</span>
+                </div>
+                <div class="header-divider"></div>
+                <div class="header-stat">
+                    <span class="header-stat-value">{{ total_playtime_hours }}h</span>
+                    <span class="header-stat-label">Played</span>
+                </div>
+                <div class="header-divider"></div>
+                <div class="header-stat">
+                    <span class="header-stat-value">Lvl {{ steam_level }}</span>
+                    <span class="header-stat-label">Steam</span>
+                </div>
+            </div>
+            <div class="header-ai-btns">
+                <button class="ai-btn" onclick="suggestChat.open()">✦ Suggest Games</button>
+                <button class="refresh-btn" id="dash-refresh-btn" onclick="refreshAll()" title="Refresh all data">↻</button>
+                <a href="/logout" class="logout-btn">Sign out</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="page-title">
+            <h2>Achievement Progress</h2>
+            <p>Tracking {{ total_games }} games with achievements</p>
+        </div>
+
+        {% if showcase_pool %}
+        <div class="showcase">
+            <div class="section-label">Rarest Achievements</div>
+            <div class="showcase-filters">
+                <button class="showcase-filter-btn active" onclick="setShowcaseGame(this, 'all')">All</button>
+                {% for g in showcase_games %}
+                <button class="showcase-filter-btn" onclick="setShowcaseGame(this, {{ g.app_id }})">{{ g.game_name }}</button>
+                {% endfor %}
+            </div>
+            <div class="showcase-scroll" id="showcase-scroll"></div>
+        </div>
+        {% endif %}
+
+        <div class="ai-chat" id="ai-suggest-chat" style="display:none">
+            <div class="ai-chat-header">
+                <span class="ai-chat-title">✦ Game Suggestions</span>
+                <button class="ai-chat-close" onclick="suggestChat.close()">✕</button>
+            </div>
+            <div class="ai-chat-messages" id="ai-suggest-messages"></div>
+            <form class="ai-chat-form" onsubmit="suggestChat.submit(event)">
+                <input type="text" class="ai-chat-input" id="ai-suggest-input"
+                    placeholder="Ask a follow-up…" autocomplete="off">
+                <button type="submit" class="ai-chat-send" id="ai-suggest-send-btn">↑</button>
+            </form>
+        </div>
+
+        <div class="controls">
+            <input type="text" id="search" class="search-bar"
+                placeholder="Search games..." oninput="applyFilters()">
+            <div class="filter-tabs">
+                <button class="filter-btn active" data-filter="all" onclick="setFilter(this)">All</button>
+                <button class="filter-btn" data-filter="PERFECT" onclick="setFilter(this)">Perfect</button>
+                <button class="filter-btn" data-filter="MASTER" onclick="setFilter(this)">Master</button>
+                <button class="filter-btn" data-filter="EXPERT" onclick="setFilter(this)">Expert</button>
+                <button class="filter-btn" data-filter="IN PROGRESS" onclick="setFilter(this)">In Progress</button>
+            </div>
+        </div>
+
+        <div id="game-list">
+            {% for game in games %}
+            <a href="/game/{{ game.appid }}" class="game-card"
+                style="animation-delay: {{ loop.index0 * 0.04 }}s; --badge-color: {{ game.color }}"
+                data-name="{{ game.name | lower }}"
+                data-badge="{{ game.badge }}"
+                data-percentage="{{ game.percentage }}"
+                data-playtime="{{ game.playtime }}"
+                data-unlocked="{{ game.unlocked }}">
+
+                <div class="rank">{{ game.rank }}</div>
+
+                <div class="game-image-wrap">
+                    <img
+                        src="https://cdn.cloudflare.steamstatic.com/steam/apps/{{ game.appid }}/header.jpg"
+                        alt="{{ game.name }}"
+                        class="game-image"
+                        onerror="if(this.src.includes('header.jpg')){this.src=this.src.replace('header.jpg','capsule_231x87.jpg')}else{this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex'}">
+                    <div class="game-image-placeholder">{{ game.name[:2] | upper }}</div>
+                </div>
+
+                <div class="game-content">
+                    <div class="game-name">{{ game.name }}</div>
+                    <div class="game-meta">
+                        <span class="badge" style="--color: {{ game.color }}">{{ game.badge }}</span>
+                        <span class="meta-item">{{ game.unlocked }}/{{ game.total }} achievements</span>
+                        <span class="meta-item">{{ game.playtime // 60 }}h {{ game.playtime % 60 }}m</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill"
+                            style="width: {{ game.percentage }}%; background: {{ game.color }};"></div>
+                    </div>
+                </div>
+
+                <div class="game-pct">
+                    <span class="pct-value" style="color: {{ game.color }}">{{ game.percentage | round | int }}%</span>
+                    <span class="pct-label">done</span>
+                </div>
+
+            </a>
+            {% endfor %}
+        </div>
+
+        <div id="no-results" class="no-results hidden">
+            <p>No games match your search.</p>
+        </div>
+    </main>
+
+    <script>
+        let activeFilter = 'all';
+
+        function applyFilters() {
+            const query = document.getElementById('search').value.toLowerCase();
+            const sortVal = 'pct-desc';
+            const list = document.getElementById('game-list');
+            const cards = Array.from(list.querySelectorAll('.game-card'));
+
+            // Filter
+            let visible = 0;
+            cards.forEach(card => {
+                const nameMatch = card.dataset.name.includes(query);
+                const badgeMatch = activeFilter === 'all' || card.dataset.badge === activeFilter;
+                card.style.display = (nameMatch && badgeMatch) ? '' : 'none';
+                if (nameMatch && badgeMatch) visible++;
+            });
+
+            document.getElementById('no-results').classList.toggle('hidden', visible > 0);
+
+            // Sort visible cards
+            const [field, dir] = sortVal.split('-');
+            const sorted = cards.filter(c => c.style.display !== 'none').sort((a, b) => {
+                let av, bv;
+                if (field === 'name') {
+                    av = a.dataset.name;
+                    bv = b.dataset.name;
+                    return dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+                }
+                av = parseFloat(field === 'pct' ? a.dataset.percentage : field === 'playtime' ? a.dataset.playtime : a.dataset.unlocked);
+                bv = parseFloat(field === 'pct' ? b.dataset.percentage : field === 'playtime' ? b.dataset.playtime : b.dataset.unlocked);
+                return dir === 'desc' ? bv - av : av - bv;
+            });
+
+            sorted.forEach(card => list.appendChild(card));
+        }
+
+        function setFilter(btn) {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            activeFilter = btn.dataset.filter;
+            applyFilters();
+        }
+
+        // ── Showcase ──
+        const showcasePool = {{ showcase_pool | tojson if showcase_pool else '[]' }};
+        let activeShowcaseGame = 'all';
+
+        function esc(s) {
+            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function renderShowcase() {
+            const filtered = activeShowcaseGame === 'all'
+                ? showcasePool.slice(0, 8)
+                : showcasePool.filter(a => a.app_id === activeShowcaseGame).slice(0, 8);
+
+            document.getElementById('showcase-scroll').innerHTML = filtered.map(a => `
+                <a href="/game/${a.app_id}" class="showcase-card">
+                    <div class="showcase-top">
+                        ${a.icon
+                            ? `<img src="${esc(a.icon)}" alt="" class="showcase-icon">`
+                            : `<div class="showcase-icon-placeholder"></div>`}
+                        <span class="showcase-pct" style="color:${esc(a.rarity_color)}">${a.global_pct}%</span>
+                    </div>
+                    <div class="showcase-ach-name">${esc(a.display_name)}</div>
+                    <div class="showcase-footer">
+                        <span class="showcase-game-name">${esc(a.game_name)}</span>
+                    </div>
+                </a>
+            `).join('');
+        }
+
+        function setShowcaseGame(btn, gameId) {
+            document.querySelectorAll('.showcase-filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            activeShowcaseGame = gameId;
+            renderShowcase();
+        }
+
+        renderShowcase();
+
+        // ── AI Chat ──
+        function sanitize(s) {
+            return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+
+        function markdownToHtml(md) {
+            // Sanitize first, then apply markdown so we never render raw HTML from the model
+            return sanitize(md)
+                .replace(/^#### (.+)$/gm, '<h4>$1</h4>')
+                .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+                .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+                .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                .replace(/^- (.+)$/gm, '<li>$1</li>')
+                .replace(/(<li>[\s\S]*?<\/li>\n?)+/g, m => `<ul>${m}</ul>`)
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/^(?!<[hul\/])(.+)$/gm, '<p>$1</p>')
+                .replace(/<p><\/p>/g, '');
+        }
+
+        function makeChat(endpoint, panelId, messagesId, inputId, sendBtnId) {
+            let history = [];
+            let busy = false;
+
+            async function open() {
+                const panel = document.getElementById(panelId);
+                panel.style.display = 'flex';
+                panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                if (history.length === 0) await call([]);
+            }
+
+            function close() {
+                document.getElementById(panelId).style.display = 'none';
+            }
+
+            async function submit(e) {
+                e.preventDefault();
+                if (busy) return;
+                const input = document.getElementById(inputId);
+                const text = input.value.trim();
+                if (!text) return;
+                input.value = '';
+                addBubble('user', text);
+                history.push({ role: 'user', content: text });
+                await call(history);
+            }
+
+            async function call(messages) {
+                busy = true;
+                document.getElementById(sendBtnId).disabled = true;
+                const bubble = addBubble('assistant', null);
+                try {
+                    const resp = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ messages })
+                    });
+                    if (!resp.ok) {
+                        const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+                        bubble.innerHTML = `<span class="ai-error">${err.detail || 'Error.'}</span>`;
+                        return;
+                    }
+                    const reader = resp.body.getReader();
+                    const decoder = new TextDecoder();
+                    let raw = '';
+                    bubble.innerHTML = '';
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        raw += decoder.decode(value, { stream: true });
+                        bubble.innerHTML = markdownToHtml(raw);
+                        scroll();
+                    }
+                    history.push({ role: 'assistant', content: raw });
+                } catch (err) {
+                    bubble.innerHTML = `<span class="ai-error">Failed to get response.</span>`;
+                } finally {
+                    busy = false;
+                    document.getElementById(sendBtnId).disabled = false;
+                }
+            }
+
+            function addBubble(role, text) {
+                const msgs = document.getElementById(messagesId);
+                const div = document.createElement('div');
+                div.className = `ai-msg ai-msg-${role}`;
+                if (role === 'user') {
+                    div.textContent = text;
+                } else if (text) {
+                    div.innerHTML = markdownToHtml(text);
+                } else {
+                    div.innerHTML = '<span class="ai-typing-dots"><span></span><span></span><span></span></span>';
+                }
+                msgs.appendChild(div);
+                scroll();
+                return div;
+            }
+
+            function scroll() {
+                const el = document.getElementById(messagesId);
+                el.scrollTop = el.scrollHeight;
+            }
+
+            return { open, close, submit };
+        }
+
+        const suggestChat = makeChat('/ai/suggestions', 'ai-suggest-chat', 'ai-suggest-messages', 'ai-suggest-input', 'ai-suggest-send-btn');
+
+        // ── Refresh all ──
+        async function refreshAll() {
+            const btn = document.getElementById('dash-refresh-btn');
+            btn.disabled = true;
+            btn.style.opacity = '0.4';
+            await fetch('/cache/clear', { method: 'POST' });
+            location.reload();
+        }
+
+        // ── Page loader ──
+        const loader = document.getElementById('page-loader');
+        document.addEventListener('click', e => {
+            const link = e.target.closest('a[href]');
+            if (link && link.href.startsWith(location.origin)) {
+                loader.classList.add('active');
+            }
+        });
+        window.addEventListener('pageshow', () => loader.classList.remove('active'));
+    </script>
+    <script src="/static/bg.js"></script>
+</body>
+</html>
