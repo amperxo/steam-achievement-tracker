@@ -151,7 +151,7 @@ async def home(request: Request):
     if get_steam_id(request):
         return RedirectResponse(url="/dashboard")
     return templates.TemplateResponse(
-        "index.html", {"request": request, "error": request.query_params.get("error")}
+        request, "index.html", {"error": request.query_params.get("error")}
     )
 
 
@@ -404,8 +404,7 @@ async def game_detail(request: Request, app_id: int):
     percentage = round(unlocked / total * 100) if total else 0
     badge, color = badge_for(percentage)
 
-    return templates.TemplateResponse("game.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "game.html", {
         "game": game_info,
         "app_id": app_id,
         "game_name": player_ach.get("gameName") or game_info.get("name", "Unknown"),
@@ -505,8 +504,7 @@ async def dashboard(request: Request):
     perfect_games = sum(1 for g in games_data if g["percentage"] >= BADGE_PERFECT)
     total_playtime_hours = sum(g["playtime"] for g in games_data) // 60
 
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "dashboard.html", {
         "games": games_data,
         "showcase_pool": showcase_pool,
         "showcase_games": showcase_games,
