@@ -5,12 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
     <link rel="icon" href="https://upload.wikimedia.org/wikipedia/commons/8/83/Steam_icon_logo.svg" type="image/svg+xml">
 </head>
 <body>
-    <canvas id="bg-canvas"></canvas>
     <div id="page-loader" class="page-loader">
         <div class="loader-ring"></div>
         <span class="loader-text">Loading...</span>
@@ -63,8 +62,8 @@
                 </div>
             </div>
             <div class="header-ai-btns">
-                <button class="ai-btn" onclick="suggestChat.open()">✦ Suggest Games</button>
-                <button class="refresh-btn" id="dash-refresh-btn" onclick="refreshAll()" title="Refresh all data">↻</button>
+                <button class="ai-btn" onclick="suggestChat.open()">[AI] Suggest Games</button>
+                <button class="refresh-btn" id="dash-refresh-btn" onclick="refreshAll()" aria-label="Refresh all data" title="Refresh all data">Refresh</button>
                 <a href="/logout" class="logout-btn">Sign out</a>
             </div>
         </div>
@@ -91,20 +90,20 @@
 
         <div class="ai-chat" id="ai-suggest-chat" style="display:none">
             <div class="ai-chat-header">
-                <span class="ai-chat-title">✦ Game Suggestions</span>
-                <button class="ai-chat-close" onclick="suggestChat.close()">✕</button>
+                <span class="ai-chat-title">Game Suggestions</span>
+                <button class="ai-chat-close" onclick="suggestChat.close()" aria-label="Close">[x]</button>
             </div>
             <div class="ai-chat-messages" id="ai-suggest-messages"></div>
             <form class="ai-chat-form" onsubmit="suggestChat.submit(event)">
                 <input type="text" class="ai-chat-input" id="ai-suggest-input"
-                    placeholder="Ask a follow-up…" autocomplete="off">
-                <button type="submit" class="ai-chat-send" id="ai-suggest-send-btn">↑</button>
+                    placeholder="ask a follow-up..." autocomplete="off">
+                <button type="submit" class="ai-chat-send" id="ai-suggest-send-btn" aria-label="Send">Send</button>
             </form>
         </div>
 
         <div class="controls">
             <input type="text" id="search" class="search-bar"
-                placeholder="Search games..." oninput="applyFilters()">
+                placeholder="search games..." oninput="applyFilters()">
             <div class="filter-tabs">
                 <button class="filter-btn active" data-filter="all" onclick="setFilter(this)">All</button>
                 <button class="filter-btn" data-filter="PERFECT" onclick="setFilter(this)">Perfect</button>
@@ -372,6 +371,5 @@
         });
         window.addEventListener('pageshow', () => loader.classList.remove('active'));
     </script>
-    <script src="/static/bg.js"></script>
 </body>
 </html>
