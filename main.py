@@ -136,7 +136,20 @@ async def security_headers(request: Request, call_next):
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def get_steam_id(request: Request) -> str | None:
-    return request.cookies.get("steam_id") or DEFAULT_STEAM_ID or None
+    cookie = request.cookies.get("steam_id")
+    if cookie and cookie.isdigit() and len(cookie) == 17:
+        return cookie
+    return DEFAULT_STEAM_ID or None
+
+
+def cookie_secure(request: Request) -> bool:
+    """Send the session cookie as Secure over HTTPS (incl. behind a proxy like
+    Vercel), while still allowing plain-HTTP local development. SECURE_COOKIES
+    forces it on regardless."""
+    if SECURE_COOKIES:
+        return True
+    forwarded = request.headers.get("x-forwarded-proto", "").split(",")[0].strip()
+    return request.url.scheme == "https" or forwarded == "https"
 
 
 def validate_app_id(app_id: int):
@@ -156,7 +169,7 @@ async def home(request: Request):
 
 
 @app.post("/login")
-async def login(steam_id: str = Form(...)):
+async def login(request: Request, steam_id: str = Form(...)):
     steam_id = steam_id.strip()
     if not steam_id.isdigit() or len(steam_id) != 17:
         return RedirectResponse("/?error=Enter+a+valid+17-digit+Steam+ID", status_code=302)
@@ -166,7 +179,7 @@ async def login(steam_id: str = Form(...)):
         max_age=60 * 60 * 24 * 30,
         httponly=True,
         samesite="lax",
-        secure=SECURE_COOKIES,
+        secure=cookie_secure(request),
     )
     return response
 
@@ -314,8 +327,10 @@ def rank_label(index: int) -> str:
 @app.post("/cache/clear/{app_id}")
 async def clear_game_cache(request: Request, app_id: int):
     validate_app_id(app_id)
-    check_rate_limit(request, max_per_min=5)
     sid = get_steam_id(request)
+    if not sid:
+        raise HTTPException(status_code=401, detail="Not logged in")
+    check_rate_limit(request, max_per_min=5)
     for key in [f"ach_{sid}_{app_id}", f"global_ach_{app_id}", f"schema_{app_id}"]:
         _cache.pop(key, None)
     return {"cleared": app_id}
