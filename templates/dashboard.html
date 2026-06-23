@@ -166,36 +166,19 @@
 
         function applyFilters() {
             const query = document.getElementById('search').value.toLowerCase();
-            const sortVal = 'pct-desc';
-            const list = document.getElementById('game-list');
-            const cards = Array.from(list.querySelectorAll('.game-card'));
+            const cards = document.querySelectorAll('#game-list .game-card');
 
-            // Filter
+            // Cards are pre-sorted server-side by completion %, so we only toggle visibility.
             let visible = 0;
             cards.forEach(card => {
                 const nameMatch = card.dataset.name.includes(query);
                 const badgeMatch = activeFilter === 'all' || card.dataset.badge === activeFilter;
-                card.style.display = (nameMatch && badgeMatch) ? '' : 'none';
-                if (nameMatch && badgeMatch) visible++;
+                const show = nameMatch && badgeMatch;
+                card.style.display = show ? '' : 'none';
+                if (show) visible++;
             });
 
             document.getElementById('no-results').classList.toggle('hidden', visible > 0);
-
-            // Sort visible cards
-            const [field, dir] = sortVal.split('-');
-            const sorted = cards.filter(c => c.style.display !== 'none').sort((a, b) => {
-                let av, bv;
-                if (field === 'name') {
-                    av = a.dataset.name;
-                    bv = b.dataset.name;
-                    return dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
-                }
-                av = parseFloat(field === 'pct' ? a.dataset.percentage : field === 'playtime' ? a.dataset.playtime : a.dataset.unlocked);
-                bv = parseFloat(field === 'pct' ? b.dataset.percentage : field === 'playtime' ? b.dataset.playtime : b.dataset.unlocked);
-                return dir === 'desc' ? bv - av : av - bv;
-            });
-
-            sorted.forEach(card => list.appendChild(card));
         }
 
         function setFilter(btn) {
@@ -214,11 +197,14 @@
         }
 
         function renderShowcase() {
+            const scroll = document.getElementById('showcase-scroll');
+            if (!scroll) return;
+
             const filtered = activeShowcaseGame === 'all'
                 ? showcasePool.slice(0, 8)
                 : showcasePool.filter(a => a.app_id === activeShowcaseGame).slice(0, 8);
 
-            document.getElementById('showcase-scroll').innerHTML = filtered.map(a => `
+            scroll.innerHTML = filtered.map(a => `
                 <a href="/game/${a.app_id}" class="showcase-card">
                     <div class="showcase-top">
                         ${a.icon
@@ -244,13 +230,9 @@
         renderShowcase();
 
         // ── AI Chat ──
-        function sanitize(s) {
-            return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        }
-
         function markdownToHtml(md) {
-            // Sanitize first, then apply markdown so we never render raw HTML from the model
-            return sanitize(md)
+            // Escape first, then apply markdown so we never render raw HTML from the model
+            return esc(md)
                 .replace(/^#### (.+)$/gm, '<h4>$1</h4>')
                 .replace(/^### (.+)$/gm, '<h3>$1</h3>')
                 .replace(/^## (.+)$/gm, '<h2>$1</h2>')
