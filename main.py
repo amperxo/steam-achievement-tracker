@@ -300,21 +300,21 @@ async def get_game_schema(app_id: int):
 
 def badge_for(percentage: float) -> tuple[str, str]:
     if percentage >= BADGE_PERFECT:
-        return "PERFECT", "#eab308"
+        return "PERFECT", "#f0b429"
     elif percentage >= BADGE_MASTER_MIN:
-        return "MASTER", "#0ea5e9"
+        return "MASTER", "#22d3ee"
     elif percentage >= BADGE_EXPERT_MIN:
-        return "EXPERT", "#8b5cf6"
+        return "EXPERT", "#34d399"
     return "IN PROGRESS", "#71717a"
 
 
 def rarity_for(pct: float) -> tuple[str, str]:
     if pct < 5:
-        return "Ultra Rare", "#eab308"
+        return "Ultra Rare", "#f0b429"
     elif pct < 15:
-        return "Rare", "#8b5cf6"
+        return "Rare", "#22d3ee"
     elif pct < 30:
-        return "Uncommon", "#0ea5e9"
+        return "Uncommon", "#34d399"
     return "Common", "#71717a"
 
 

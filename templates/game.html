@@ -5,12 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
     <link rel="icon" href="https://upload.wikimedia.org/wikipedia/commons/8/83/Steam_icon_logo.svg" type="image/svg+xml">
 </head>
 <body>
-    <canvas id="bg-canvas"></canvas>
     <div id="page-loader" class="page-loader">
         <div class="loader-ring"></div>
         <span class="loader-text">Loading...</span>
@@ -55,7 +54,7 @@
             alt=""
             onerror="if(this.src.includes('header.jpg')){this.src=this.src.replace('header.jpg','capsule_616x353.jpg')}else{this.onerror=null;this.style.display='none'}">
         <div class="game-hero-overlay">
-            <a href="/dashboard" class="back-btn">← Dashboard</a>
+            <a href="/dashboard" class="back-btn">&lt;- Dashboard</a>
             <h1 class="game-title">{{ game_name }}</h1>
             <div class="game-hero-bar-wrap">
                 <div class="game-hero-bar">
@@ -72,22 +71,22 @@
             <span>{{ unlocked }} Unlocked</span>
             <div style="display:flex;gap:8px;align-items:center">
                 {% if unlocked < total %}
-                <button class="ai-btn" onclick="loadAiStrategy({{ app_id }})">✦ AI Strategy</button>
+                <button class="ai-btn" onclick="loadAiStrategy({{ app_id }})">[AI] Strategy</button>
                 {% endif %}
-                <button class="refresh-btn" onclick="refreshData({{ app_id }})" id="refresh-btn" title="Refresh achievement data">↻</button>
+                <button class="refresh-btn" onclick="refreshData({{ app_id }})" id="refresh-btn" aria-label="Refresh achievement data" title="Refresh achievement data">Refresh</button>
             </div>
         </div>
 
         <div class="ai-chat" id="ai-chat" style="display:none">
             <div class="ai-chat-header">
-                <span class="ai-chat-title">✦ AI Strategy — {{ game_name }}</span>
-                <button class="ai-chat-close" onclick="closeChat()">✕</button>
+                <span class="ai-chat-title">AI Strategy — {{ game_name }}</span>
+                <button class="ai-chat-close" onclick="closeChat()" aria-label="Close">[x]</button>
             </div>
             <div class="ai-chat-messages" id="ai-chat-messages"></div>
             <form class="ai-chat-form" onsubmit="sendMessage(event)">
                 <input type="text" class="ai-chat-input" id="ai-chat-input"
-                    placeholder="Ask a follow-up…" autocomplete="off">
-                <button type="submit" class="ai-chat-send" id="ai-chat-send-btn">↑</button>
+                    placeholder="ask a follow-up..." autocomplete="off">
+                <button type="submit" class="ai-chat-send" id="ai-chat-send-btn" aria-label="Send">Send</button>
             </form>
         </div>
 
@@ -138,7 +137,6 @@
         });
         window.addEventListener('pageshow', () => loader.classList.remove('active'));
     </script>
-    <script src="/static/bg.js"></script>
     <script>
         // ── Refresh ──
         async function refreshData(appId) {
