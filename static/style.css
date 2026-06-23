@@ -7,7 +7,7 @@
     --faint:   #454545;
     --line:    #242424;
     --line-2:  #3a3a3a;
-    --accent:  #d8a13a;
+    --accent:  #a78bfa;
     --red:     #f0857d;
 }
 
@@ -237,9 +237,10 @@ a { color: inherit; }
 .showcase-ach-name {
     font-size: 0.76rem; font-weight: 500; line-height: 1.35;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    overflow-wrap: anywhere;
 }
 .showcase-footer { margin-top: auto; }
-.showcase-game-name { font-size: 0.66rem; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.showcase-game-name { display: block; font-size: 0.66rem; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ── Controls ── */
 
