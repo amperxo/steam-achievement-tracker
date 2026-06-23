@@ -545,8 +545,10 @@ GUARDRAIL = (
     "\n\nUse only ## and ### for headings — never #### or deeper."
 )
 
-TOPIC_CHECK_SYSTEM = """You are a classifier. Decide if a message is related to gaming, video games, or Steam.
-Reply with exactly one word: GAMING or OFFTOPIC. No explanation."""
+TOPIC_CHECK_SYSTEM = """You are a strict content classifier for a gaming assistant.
+Reply OFFTOPIC if the message contains ANY request unrelated to gaming, video games, Steam, or the player's games and achievements — even if most of the message is about gaming. Unrelated topics include math, programming, computer science (e.g. big O notation, algorithms), science, general knowledge, current events, and writing or homework tasks.
+Reply GAMING only if the ENTIRE message is about gaming.
+Answer with exactly one word: GAMING or OFFTOPIC. No explanation."""
 
 
 async def is_gaming_related(text: str) -> bool:
